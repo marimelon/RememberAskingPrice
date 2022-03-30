@@ -1,0 +1,7 @@
+{
+    "Author": "marimelon",
+    "Name": "RememberAskingPrice",
+    "Description": "Remember the last asking price and set it as the initial value.",
+    "RepoUrl": "https://github.com/marimelon/RememberAskingPrice",
+    "LoadPriority": 1
+}
