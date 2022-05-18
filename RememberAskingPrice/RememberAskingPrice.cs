@@ -104,7 +104,7 @@ namespace RememberAskingPrice
                 if (Service.Configuration.Data.TryGetValue(this.OpenItem, out uint price))
                 {
                     PluginLog.Debug($"Restore Item = {this.OpenItem} Price = {price}");
-                    SetRetainerSellValue(price, _addon);
+                    _addon->AskingPrice->SetValue((int)price);
                 }
             }
             catch (Exception ex)
@@ -130,11 +130,11 @@ namespace RememberAskingPrice
                 {
                     // Clicked Confirm
                     var _addon = (AddonRetainerSell*)eventListener;
-                    var askingPriceText = GetSeStringText(GetSeString((IntPtr)_addon->AskingPrice->AtkTextNode->NodeText.StringPtr));
+                    var askingPriceText = _addon->AskingPrice->AtkComponentInputBase.AtkTextNode->NodeText.ToString();
 
                     if (uint.TryParse(askingPriceText, out var askingPrice) && !string.IsNullOrEmpty(this.OpenItem))
                     {
-                        Service.Configuration.Data[this.OpenItem] = askingPrice;
+                        Service.Configuration.Data[this.OpenItem] = (uint)askingPrice;
                         Service.Configuration.Save();
                         PluginLog.Debug($"Set LastSetPrices[{this.OpenItem}] = {askingPrice}");
 
@@ -147,41 +147,6 @@ namespace RememberAskingPrice
             }
 
             return result;
-        }
-
-
-        unsafe private void SetRetainerSellValue(uint value, AddonRetainerSell* addon)
-        {
-            try
-            {
-                var addonBase = &addon->AtkUnitBase;
-                var target = addon->AskingPrice;
-                var listener = &addonBase->AtkEventListener;
-
-                var eventData = stackalloc void*[3];
-                eventData[0] = null;
-                eventData[1] = target->AtkComponentInputBase.AtkComponentBase.OwnerNode;
-                eventData[2] = addonBase;
-
-                var inputDataLength = 8;
-                var inputData = stackalloc void*[inputDataLength];
-                for (var i = 0; i < inputDataLength; i++)
-                {
-                    inputData[i] = null;
-                }
-
-                inputData[0] = (void*)value;
-
-                var eventType = EventType.SLIDER_CHANGE;
-
-                var receiveEventAddress = new IntPtr(listener->vfunc[2]);
-                var receiveEvent = Marshal.GetDelegateForFunctionPointer<ReceiveEventDelegate>(receiveEventAddress)!;
-                receiveEvent(listener, eventType, 0, eventData, inputData);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error(ex, "Don't crash the game");
-            }
         }
     }
 }
