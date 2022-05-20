@@ -130,7 +130,7 @@ namespace RememberAskingPrice
                 {
                     // Clicked Confirm
                     var _addon = (AddonRetainerSell*)eventListener;
-                    var askingPriceText = _addon->AskingPrice->AtkComponentInputBase.AtkTextNode->NodeText.ToString();
+                    var askingPriceText = _addon->AskingPrice->AtkTextNode->NodeText.ToString();
 
                     if (uint.TryParse(askingPriceText, out var askingPrice) && !string.IsNullOrEmpty(this.OpenItem))
                     {
