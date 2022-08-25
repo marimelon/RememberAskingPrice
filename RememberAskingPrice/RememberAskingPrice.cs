@@ -24,21 +24,29 @@ namespace RememberAskingPrice
 
         private string? OpenItem = null;
 
-        [Signature("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", DetourName = nameof(AddonRetainerSellOnSetupDetour))]
         private Hook<OnSetupDelegate> AddonRetainerSellOnSetupHook = null!;
-
-        [Signature("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", DetourName = nameof(AddonRetainerSellReceiveEventDetour))]
         private Hook<ReceiveEventDelegate> AddonRetainerSellReceiveEventHook = null!;
 
         public RememberAskingPrice(DalamudPluginInterface pluginInterface)
         {
-            SignatureHelper.Initialise(this);
-
             pluginInterface.Create<Service>();
 
             Service.Plugin = this;
 
             Service.Configuration = (Configuration?)Service.Interface.GetPluginConfig() ?? new Configuration();
+
+            if (Service.Scanner.TryScanText("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", out var ptr1))
+            {
+                this.AddonRetainerSellOnSetupHook = Hook<OnSetupDelegate>.FromAddress(ptr1, this.AddonRetainerSellOnSetupDetour);
+            }
+
+            if (Service.Scanner.TryScanText("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", out var ptr2))
+            {
+                unsafe
+                {
+                    this.AddonRetainerSellReceiveEventHook = Hook<ReceiveEventDelegate>.FromAddress(ptr2, this.AddonRetainerSellReceiveEventDetour);
+                }
+            }
 
             this.AddonRetainerSellOnSetupHook.Enable();
             this.AddonRetainerSellReceiveEventHook.Enable();
@@ -108,7 +116,7 @@ namespace RememberAskingPrice
         {
             PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellReceiveEvent");
 
-            var result = this.AddonRetainerSellReceiveEventHook!.Original(eventListener, evt, which, eventData, inputData);
+            var result = this.AddonRetainerSellReceiveEventHook.Original(eventListener, evt, which, eventData, inputData);
 
             try
             {
