@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -8,6 +7,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using Dalamud.Memory;
 using Dalamud.Plugin;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace RememberAskingPrice
@@ -24,35 +24,24 @@ namespace RememberAskingPrice
 
         private string? OpenItem = null;
 
-        // [Signature("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", DetourName = nameof(AddonRetainerSellOnSetupDetour))]
-        private Hook<OnSetupDelegate>? AddonRetainerSellOnSetupHook { get; init; }
+        [Signature("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", DetourName = nameof(AddonRetainerSellOnSetupDetour))]
+        private Hook<OnSetupDelegate> AddonRetainerSellOnSetupHook = null!;
 
-        // [Signature("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", DetourName = nameof(AddonRetainerSellReceiveEventDetour))]
-        private Hook<ReceiveEventDelegate>? AddonRetainerSellReceiveEventHook { get; init; }
+        [Signature("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", DetourName = nameof(AddonRetainerSellReceiveEventDetour))]
+        private Hook<ReceiveEventDelegate> AddonRetainerSellReceiveEventHook = null!;
 
         public RememberAskingPrice(DalamudPluginInterface pluginInterface)
         {
+            SignatureHelper.Initialise(this);
+
             pluginInterface.Create<Service>();
 
             Service.Plugin = this;
 
             Service.Configuration = (Configuration?)Service.Interface.GetPluginConfig() ?? new Configuration();
 
-            if (Service.Scanner.TryScanText("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", out var ptr1))
-            {
-                this.AddonRetainerSellOnSetupHook = new Hook<OnSetupDelegate>(ptr1, this.AddonRetainerSellOnSetupDetour);
-            }
-
-            if (Service.Scanner.TryScanText("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", out var ptr2))
-            {
-                unsafe
-                {
-                    this.AddonRetainerSellReceiveEventHook = new Hook<ReceiveEventDelegate>(ptr2, this.AddonRetainerSellReceiveEventDetour);
-                }
-            }
-
-            this.AddonRetainerSellOnSetupHook?.Enable();
-            this.AddonRetainerSellReceiveEventHook?.Enable();
+            this.AddonRetainerSellOnSetupHook.Enable();
+            this.AddonRetainerSellReceiveEventHook.Enable();
 
             this.pluginUi = new();
             this.windowSystem = new(this.Name);
@@ -66,8 +55,8 @@ namespace RememberAskingPrice
             Service.Interface.UiBuilder.OpenConfigUi -= this.OnOpenConfigUi;
             Service.Interface.UiBuilder.Draw -= this.windowSystem.Draw;
             
-            this.AddonRetainerSellOnSetupHook?.Dispose();
-            this.AddonRetainerSellReceiveEventHook?.Dispose();
+            this.AddonRetainerSellOnSetupHook.Dispose();
+            this.AddonRetainerSellReceiveEventHook.Dispose();
         }
 
         internal void OnOpenConfigUi() => this.pluginUi.Toggle();

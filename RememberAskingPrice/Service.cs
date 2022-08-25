@@ -12,8 +12,5 @@ namespace RememberAskingPrice
 
         [PluginService]
         internal static DalamudPluginInterface Interface { get; private set; } = null!;
-
-        [PluginService]
-        internal static SigScanner Scanner { get; private set; } = null!;
     }
 }
