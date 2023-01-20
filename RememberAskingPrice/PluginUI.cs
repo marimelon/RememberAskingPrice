@@ -1,8 +1,8 @@
-﻿using System.Numerics;
+﻿using System.Linq;
+using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using ImGuiNET;
-using System.Linq;
 
 namespace RememberAskingPrice
 {
@@ -28,7 +28,38 @@ namespace RememberAskingPrice
             }
 
 
-            if (ImGui.CollapsingHeader("Saved", ImGuiTreeNodeFlags.DefaultOpen))
+            #region Features
+
+            if (!Service.Configuration.Enabled)
+            {
+                ImGui.BeginDisabled();
+            }
+
+            ImGui.Text("Features");
+            var enable2 = Service.Configuration.EnabledAskingPrice;
+            if (ImGui.Checkbox("Enabled AskingPrice", ref enable2))
+            {
+                Service.Configuration.EnabledAskingPrice = enable2;
+                Service.Configuration.Save();
+            }
+
+            var enable3 = Service.Configuration.EnabledQuantity;
+            if (ImGui.Checkbox("Enabled Quantity", ref enable3))
+            {
+                Service.Configuration.EnabledQuantity = enable3;
+                Service.Configuration.Save();
+            }
+
+            if (!Service.Configuration.Enabled)
+            {
+                ImGui.EndDisabled();
+            }
+
+            #endregion
+
+
+            #region Data
+            if (ImGui.CollapsingHeader("Data", ImGuiTreeNodeFlags.DefaultOpen))
             {
                 if (ImGui.Button("Clear"))
                 {
@@ -36,13 +67,14 @@ namespace RememberAskingPrice
                     Service.Configuration.Save();
                 }
 
-                if (ImGui.BeginTable("items_table", 3, ImGuiTableFlags.Sortable))
+                if (ImGui.BeginTable("items_table", 4, ImGuiTableFlags.Sortable))
                 {
                     ImGui.TableSetupColumn("Name");
                     ImGui.TableSetupColumn("Price");
+                    ImGui.TableSetupColumn("Quantity");
                     ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoSort);
                     ImGui.TableHeadersRow();
-                    
+
                     unsafe
                     {
                         var sorts_specs = ImGui.TableGetSortSpecs();
@@ -58,9 +90,11 @@ namespace RememberAskingPrice
                     var items = (this.SortId, this.SortDirectionr) switch
                     {
                         (0, ImGuiSortDirection.Ascending) => Service.Configuration.Data.OrderBy(item => item.Key),
-                        (1, ImGuiSortDirection.Ascending) => Service.Configuration.Data.OrderBy(item => item.Value),
+                        (1, ImGuiSortDirection.Ascending) => Service.Configuration.Data.OrderBy(item => item.Value.AskingPrice),
+                        (2, ImGuiSortDirection.Ascending) => Service.Configuration.Data.OrderBy(item => item.Value.Quantity),
                         (0, ImGuiSortDirection.Descending) => Service.Configuration.Data.OrderByDescending(item => item.Key),
-                        (1, ImGuiSortDirection.Descending) => Service.Configuration.Data.OrderByDescending(item => item.Value),
+                        (1, ImGuiSortDirection.Descending) => Service.Configuration.Data.OrderByDescending(item => item.Value.AskingPrice),
+                        (2, ImGuiSortDirection.Descending) => Service.Configuration.Data.OrderByDescending(item => item.Value.Quantity),
                         _ => Service.Configuration.Data.OrderBy(item => item.Key)
                     };
 
@@ -71,7 +105,9 @@ namespace RememberAskingPrice
                         ImGui.TableNextColumn();
                         ImGui.Text(item.Key);
                         ImGui.TableNextColumn();
-                        ImGui.Text(string.Format("{0:#,0}", (int)item.Value));
+                        ImGui.Text(string.Format("{0:#,0}", (int)item.Value.AskingPrice));
+                        ImGui.TableNextColumn();
+                        ImGui.Text(string.Format("{0:#,0}", (int)item.Value.Quantity));
                         ImGui.TableNextColumn();
                         if (ImGui.Button("Remove##" + item.Key))
                         {
@@ -82,6 +118,7 @@ namespace RememberAskingPrice
                 }
                 ImGui.EndTable();
             }
+            #endregion
         }
     }
 }

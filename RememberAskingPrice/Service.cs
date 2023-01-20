@@ -8,7 +8,7 @@ namespace RememberAskingPrice
     {
         internal static RememberAskingPrice Plugin { get; set; } = null!;
 
-        internal static Configuration Configuration { get; set; } = null!;
+        internal static ConfigurationV1 Configuration { get; set; } = null!;
 
         [PluginService]
         internal static DalamudPluginInterface Interface { get; private set; } = null!;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -7,7 +8,6 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Logging;
 using Dalamud.Memory;
 using Dalamud.Plugin;
-using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace RememberAskingPrice
@@ -33,7 +33,8 @@ namespace RememberAskingPrice
 
             Service.Plugin = this;
 
-            Service.Configuration = (Configuration?)Service.Interface.GetPluginConfig() ?? new Configuration();
+            var pluginConfigPath = new FileInfo(Path.Combine(Service.Interface.ConfigDirectory.Parent!.FullName, $"RememberAskingPrice.json"));
+            Service.Configuration = ConfigurationV1.Load(pluginConfigPath) ?? new ConfigurationV1();
 
             if (Service.Scanner.TryScanText("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", out var ptr1))
             {
@@ -62,7 +63,7 @@ namespace RememberAskingPrice
         {
             Service.Interface.UiBuilder.OpenConfigUi -= this.OnOpenConfigUi;
             Service.Interface.UiBuilder.Draw -= this.windowSystem.Draw;
-            
+
             this.AddonRetainerSellOnSetupHook.Dispose();
             this.AddonRetainerSellReceiveEventHook.Dispose();
         }
@@ -98,11 +99,23 @@ namespace RememberAskingPrice
 
                 this.OpenItem = itemname;
 
-                if (Service.Configuration.Data.TryGetValue(this.OpenItem, out uint price))
+                if (!Service.Configuration.Data.TryGetValue(this.OpenItem, out var savedData))
                 {
-                    PluginLog.Debug($"Restore Item = {this.OpenItem} Price = {price}");
-                    _addon->AskingPrice->SetValue((int)price);
+                    return result;
                 }
+
+                if (Service.Configuration.EnabledAskingPrice && savedData.AskingPrice > 0)
+                {
+                    PluginLog.Debug($"Restore Item = {this.OpenItem} Price = {savedData.AskingPrice}");
+                    _addon->AskingPrice->SetValue((int)savedData.AskingPrice);
+                }
+
+                if (Service.Configuration.EnabledQuantity && savedData.Quantity > 0)
+                {
+                    PluginLog.Debug($"Restore Item = {this.OpenItem} Quantity = {savedData.Quantity}");
+                    _addon->Quantity->SetValue((int)savedData.Quantity);
+                }
+
             }
             catch (Exception ex)
             {
@@ -127,14 +140,30 @@ namespace RememberAskingPrice
                 {
                     // Clicked Confirm
                     var _addon = (AddonRetainerSell*)eventListener;
-                    var askingPriceText = _addon->AskingPrice->AtkComponentInputBase.AtkTextNode->NodeText.ToString();
 
-                    if (uint.TryParse(askingPriceText, out var askingPrice) && !string.IsNullOrEmpty(this.OpenItem))
+                    // AskingPrice
+                    if (Service.Configuration.EnabledAskingPrice)
                     {
-                        Service.Configuration.Data[this.OpenItem] = (uint)askingPrice;
-                        Service.Configuration.Save();
-                        PluginLog.Debug($"Set LastSetPrices[{this.OpenItem}] = {askingPrice}");
+                        var askingPriceText = _addon->AskingPrice->AtkComponentInputBase.AtkTextNode->NodeText.ToString();
+                        if (uint.TryParse(askingPriceText, out var askingPrice) && !string.IsNullOrEmpty(this.OpenItem))
+                        {
+                            Service.Configuration.SetAskingPrice(this.OpenItem, (uint)askingPrice);
+                            Service.Configuration.Save();
+                            PluginLog.Debug($"Set LastSetPrices[{this.OpenItem}] = {askingPrice}");
 
+                        }
+                    }
+
+                    // Quantity
+                    if (Service.Configuration.EnabledQuantity)
+                    {
+                        var quantityText = _addon->Quantity->AtkComponentInputBase.AtkTextNode->NodeText.ToString();
+                        if (uint.TryParse(quantityText, out var quantity) && !string.IsNullOrEmpty(this.OpenItem))
+                        {
+                            Service.Configuration.SetQuantity(this.OpenItem, (uint)quantity);
+                            Service.Configuration.Save();
+                            PluginLog.Debug($"Set LastSetQuantity[{this.OpenItem}] = {quantity}");
+                        }
                     }
                 }
             }
