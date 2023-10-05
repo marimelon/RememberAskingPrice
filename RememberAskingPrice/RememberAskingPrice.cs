@@ -36,17 +36,10 @@ namespace RememberAskingPrice
             var pluginConfigPath = new FileInfo(Path.Combine(Service.Interface.ConfigDirectory.Parent!.FullName, $"RememberAskingPrice.json"));
             Service.Configuration = ConfigurationV1.Load(pluginConfigPath) ?? new ConfigurationV1();
 
-            if (Service.Scanner.TryScanText("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??", out var ptr1))
+            this.AddonRetainerSellOnSetupHook = Service.InteropProvider.HookFromSignature<OnSetupDelegate>("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??",this.AddonRetainerSellOnSetupDetour);
+            unsafe
             {
-                this.AddonRetainerSellOnSetupHook = Hook<OnSetupDelegate>.FromAddress(ptr1, this.AddonRetainerSellOnSetupDetour);
-            }
-
-            if (Service.Scanner.TryScanText("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", out var ptr2))
-            {
-                unsafe
-                {
-                    this.AddonRetainerSellReceiveEventHook = Hook<ReceiveEventDelegate>.FromAddress(ptr2, this.AddonRetainerSellReceiveEventDetour);
-                }
+                this.AddonRetainerSellReceiveEventHook = Service.InteropProvider.HookFromSignature<ReceiveEventDelegate>("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", this.AddonRetainerSellReceiveEventDetour);
             }
 
             this.AddonRetainerSellOnSetupHook.Enable();

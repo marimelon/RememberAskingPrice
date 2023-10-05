@@ -1,6 +1,7 @@
 using Dalamud.Game;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
 
 namespace RememberAskingPrice
 {
@@ -14,6 +15,6 @@ namespace RememberAskingPrice
         internal static DalamudPluginInterface Interface { get; private set; } = null!;
 
         [PluginService]
-        internal static SigScanner Scanner { get; private set; } = null!;
+        internal static IGameInteropProvider InteropProvider { get; private set; } = null!;
     }
 }
