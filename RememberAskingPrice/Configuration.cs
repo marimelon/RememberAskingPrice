@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using Dalamud.Configuration;
-using Dalamud.Logging;
 using Newtonsoft.Json;
 
 namespace RememberAskingPrice
@@ -97,7 +96,7 @@ namespace RememberAskingPrice
             {
                 v1.Data[key] = (value, 0);
             }
-            PluginLog.Debug("Successfully migrated: v0 to v1");
+            Service.PluginLog.Debug("Successfully migrated: v0 to v1");
             return v1;
         }
 

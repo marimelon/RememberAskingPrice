@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using ImGuiNET;
 
 namespace RememberAskingPrice
@@ -82,7 +81,7 @@ namespace RememberAskingPrice
                         {
                             this.SortId = sorts_specs.Specs.ColumnIndex;
                             this.SortDirectionr = sorts_specs.Specs.SortDirection;
-                            PluginLog.Debug($"{sorts_specs.Specs.ColumnIndex} {sorts_specs.Specs.SortDirection}");
+                            Service.PluginLog.Debug($"{sorts_specs.Specs.ColumnIndex} {sorts_specs.Specs.SortDirection}");
                             sorts_specs.SpecsDirty = false;
                         }
                     }

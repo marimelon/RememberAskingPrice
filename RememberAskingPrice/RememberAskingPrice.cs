@@ -5,7 +5,6 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
 using Dalamud.Memory;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -27,7 +26,7 @@ namespace RememberAskingPrice
         private Hook<OnSetupDelegate> AddonRetainerSellOnSetupHook = null!;
         private Hook<ReceiveEventDelegate> AddonRetainerSellReceiveEventHook = null!;
 
-        public RememberAskingPrice(DalamudPluginInterface pluginInterface)
+        public RememberAskingPrice(IDalamudPluginInterface pluginInterface)
         {
             pluginInterface.Create<Service>();
 
@@ -36,10 +35,10 @@ namespace RememberAskingPrice
             var pluginConfigPath = new FileInfo(Path.Combine(Service.Interface.ConfigDirectory.Parent!.FullName, $"RememberAskingPrice.json"));
             Service.Configuration = ConfigurationV1.Load(pluginConfigPath) ?? new ConfigurationV1();
 
-            this.AddonRetainerSellOnSetupHook = Service.InteropProvider.HookFromSignature<OnSetupDelegate>("48 89 5C 24 ?? 55 56 57 48 83 EC 50 4C 89 64 24 ??",this.AddonRetainerSellOnSetupDetour);
+            this.AddonRetainerSellOnSetupHook = Service.InteropProvider.HookFromSignature<OnSetupDelegate>("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 50 4C 89 74 24 ??", this.AddonRetainerSellOnSetupDetour);
             unsafe
             {
-                this.AddonRetainerSellReceiveEventHook = Service.InteropProvider.HookFromSignature<ReceiveEventDelegate>("40 53 48 83 EC 20 0F B7 C2 48 8B D9 83 F8 17", this.AddonRetainerSellReceiveEventDetour);
+                this.AddonRetainerSellReceiveEventHook = Service.InteropProvider.HookFromSignature<ReceiveEventDelegate>("48 89 7C 24 ?? 4C 89 74 24 ?? 55 48 8B EC 48 83 EC 40 49 8B F9 4C 8B F1", this.AddonRetainerSellReceiveEventDetour);
             }
 
             this.AddonRetainerSellOnSetupHook.Enable();
@@ -77,7 +76,7 @@ namespace RememberAskingPrice
 
         unsafe private IntPtr AddonRetainerSellOnSetupDetour(IntPtr addon, uint a2, IntPtr dataPtr)
         {
-            PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellOnSetupDetour");
+            Service.PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellOnSetupDetour");
             var result = this.AddonRetainerSellOnSetupHook!.Original(addon, a2, dataPtr);
 
             try
@@ -88,7 +87,7 @@ namespace RememberAskingPrice
                 var _addon = (AddonRetainerSell*)addon;
                 var itemname = GetSeStringText(GetSeString((IntPtr)_addon->ItemName->NodeText.StringPtr));
 
-                PluginLog.Debug($"ItemName = {itemname}");
+                Service.PluginLog.Debug($"ItemName = {itemname}");
 
                 this.OpenItem = itemname;
 
@@ -99,20 +98,20 @@ namespace RememberAskingPrice
 
                 if (Service.Configuration.EnabledAskingPrice && savedData.AskingPrice > 0)
                 {
-                    PluginLog.Debug($"Restore Item = {this.OpenItem} Price = {savedData.AskingPrice}");
+                    Service.PluginLog.Debug($"Restore Item = {this.OpenItem} Price = {savedData.AskingPrice}");
                     _addon->AskingPrice->SetValue((int)savedData.AskingPrice);
                 }
 
                 if (Service.Configuration.EnabledQuantity && savedData.Quantity > 0)
                 {
-                    PluginLog.Debug($"Restore Item = {this.OpenItem} Quantity = {savedData.Quantity}");
+                    Service.PluginLog.Debug($"Restore Item = {this.OpenItem} Quantity = {savedData.Quantity}");
                     _addon->Quantity->SetValue((int)savedData.Quantity);
                 }
 
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, "Don't crash the game");
+                Service.PluginLog.Error(ex, "Don't crash the game");
             }
 
             return result;
@@ -120,7 +119,7 @@ namespace RememberAskingPrice
 
         unsafe private IntPtr AddonRetainerSellReceiveEventDetour(void* eventListener, EventType evt, uint which, void* eventData, void* inputData)
         {
-            PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellReceiveEvent");
+            Service.PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellReceiveEvent");
 
             var result = this.AddonRetainerSellReceiveEventHook.Original(eventListener, evt, which, eventData, inputData);
 
@@ -142,7 +141,7 @@ namespace RememberAskingPrice
                         {
                             Service.Configuration.SetAskingPrice(this.OpenItem, (uint)askingPrice);
                             Service.Configuration.Save();
-                            PluginLog.Debug($"Set LastSetPrices[{this.OpenItem}] = {askingPrice}");
+                            Service.PluginLog.Debug($"Set LastSetPrices[{this.OpenItem}] = {askingPrice}");
 
                         }
                     }
@@ -155,14 +154,14 @@ namespace RememberAskingPrice
                         {
                             Service.Configuration.SetQuantity(this.OpenItem, (uint)quantity);
                             Service.Configuration.Save();
-                            PluginLog.Debug($"Set LastSetQuantity[{this.OpenItem}] = {quantity}");
+                            Service.PluginLog.Debug($"Set LastSetQuantity[{this.OpenItem}] = {quantity}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                PluginLog.Error(ex, "Don't crash the game");
+                Service.PluginLog.Error(ex, "Don't crash the game");
             }
 
             return result;
