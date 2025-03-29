@@ -85,7 +85,7 @@ namespace RememberAskingPrice
                     return result;
 
                 var _addon = (AddonRetainerSell*)addon;
-                var itemname = GetSeStringText(GetSeString((IntPtr)_addon->ItemName->NodeText.StringPtr));
+                var itemname = GetSeStringText(GetSeString((IntPtr)_addon->ItemName->NodeText.StringPtr.Value));
 
                 Service.PluginLog.Debug($"ItemName = {itemname}");
 
