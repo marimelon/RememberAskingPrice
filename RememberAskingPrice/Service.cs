@@ -18,5 +18,8 @@ namespace RememberAskingPrice
 
         [PluginService]
         internal static IPluginLog PluginLog { get; private set; } = null!;
+
+        [PluginService] 
+        public static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     }
 }

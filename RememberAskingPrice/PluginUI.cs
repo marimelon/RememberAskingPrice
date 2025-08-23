@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Numerics;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace RememberAskingPrice
 {
@@ -77,7 +77,7 @@ namespace RememberAskingPrice
                     unsafe
                     {
                         var sorts_specs = ImGui.TableGetSortSpecs();
-                        if (sorts_specs.NativePtr != null && sorts_specs.SpecsDirty)
+                        if (!sorts_specs.IsNull && sorts_specs.SpecsDirty)
                         {
                             this.SortId = sorts_specs.Specs.ColumnIndex;
                             this.SortDirectionr = sorts_specs.Specs.SortDirection;
