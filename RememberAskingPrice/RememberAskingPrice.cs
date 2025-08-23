@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Hooking;
@@ -23,7 +26,6 @@ namespace RememberAskingPrice
 
         private string? OpenItem = null;
 
-        private Hook<OnSetupDelegate> AddonRetainerSellOnSetupHook = null!;
         private Hook<ReceiveEventDelegate> AddonRetainerSellReceiveEventHook = null!;
 
         public RememberAskingPrice(IDalamudPluginInterface pluginInterface)
@@ -35,13 +37,13 @@ namespace RememberAskingPrice
             var pluginConfigPath = new FileInfo(Path.Combine(Service.Interface.ConfigDirectory.Parent!.FullName, $"RememberAskingPrice.json"));
             Service.Configuration = ConfigurationV1.Load(pluginConfigPath) ?? new ConfigurationV1();
 
-            this.AddonRetainerSellOnSetupHook = Service.InteropProvider.HookFromSignature<OnSetupDelegate>("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 50 4C 89 74 24 ??", this.AddonRetainerSellOnSetupDetour);
+            Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "RetainerSell", AddonRetainerSellOnSetupDetour);
+
             unsafe
             {
                 this.AddonRetainerSellReceiveEventHook = Service.InteropProvider.HookFromSignature<ReceiveEventDelegate>("48 89 7C 24 ?? 4C 89 74 24 ?? 55 48 8B EC 48 83 EC 40 49 8B F9 4C 8B F1", this.AddonRetainerSellReceiveEventDetour);
             }
 
-            this.AddonRetainerSellOnSetupHook.Enable();
             this.AddonRetainerSellReceiveEventHook.Enable();
 
             this.pluginUi = new();
@@ -56,7 +58,8 @@ namespace RememberAskingPrice
             Service.Interface.UiBuilder.OpenConfigUi -= this.OnOpenConfigUi;
             Service.Interface.UiBuilder.Draw -= this.windowSystem.Draw;
 
-            this.AddonRetainerSellOnSetupHook.Dispose();
+            Service.AddonLifecycle.UnregisterListener(AddonRetainerSellOnSetupDetour);
+
             this.AddonRetainerSellReceiveEventHook.Dispose();
         }
 
@@ -74,17 +77,16 @@ namespace RememberAskingPrice
             return text;
         }
 
-        unsafe private IntPtr AddonRetainerSellOnSetupDetour(IntPtr addon, uint a2, IntPtr dataPtr)
+        unsafe private void AddonRetainerSellOnSetupDetour(AddonEvent eventType, AddonArgs addonInfo)
         {
             Service.PluginLog.Debug("EnableComplementSellPrice::AddonRetainerSellOnSetupDetour");
-            var result = this.AddonRetainerSellOnSetupHook!.Original(addon, a2, dataPtr);
 
             try
             {
                 if (!Service.Configuration.Enabled)
-                    return result;
+                    return;
 
-                var _addon = (AddonRetainerSell*)addon;
+                var _addon = (AddonRetainerSell*)addonInfo.Addon.Address;
                 var itemname = GetSeStringText(GetSeString((IntPtr)_addon->ItemName->NodeText.StringPtr.Value));
 
                 Service.PluginLog.Debug($"ItemName = {itemname}");
@@ -93,7 +95,7 @@ namespace RememberAskingPrice
 
                 if (!Service.Configuration.Data.TryGetValue(this.OpenItem, out var savedData))
                 {
-                    return result;
+                    return;
                 }
 
                 if (Service.Configuration.EnabledAskingPrice && savedData.AskingPrice > 0)
@@ -114,7 +116,7 @@ namespace RememberAskingPrice
                 Service.PluginLog.Error(ex, "Don't crash the game");
             }
 
-            return result;
+            return;
         }
 
         unsafe private IntPtr AddonRetainerSellReceiveEventDetour(void* eventListener, EventType evt, uint which, void* eventData, void* inputData)
